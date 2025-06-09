@@ -259,7 +259,7 @@ class BookingsDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class PropertyBookingView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self,request,pk):
         booking = Bookings.objects.filter(property_id=pk)
