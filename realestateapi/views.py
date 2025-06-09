@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from . import serializers
 from datetime import datetime
+import requests 
 # AUTHENTICATION VIEWS
 
 class LoginView(APIView):
@@ -265,3 +266,38 @@ class PropertyBookingView(APIView):
         booking = Bookings.objects.filter(property_id=pk)
         serializer = serializers.BookingsSerializer(booking,many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class FeaturedPropertyView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        properties = Properties.objects.filter(is_featured=True)
+        serializer = serializers.PropertySerializer(properties, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class PayStackView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        user = request.user
+        amount = request.data.get('total_price')
+        email = request.data.get('email')
+        if not amount or not email:
+            return Response({"error": "Amount and email are required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            headers = {
+                "Authorization": f'Bearer {settings.PAYSTACK_SECRET_KEY}',
+                "Content-Type": "application/json"
+            }
+
+            data = {
+                "email":email,
+                "amount": int(float(amount) * 100)  # Convert to kobo
+            }
+
+            response = requests.post('https://api.paystack.co/transaction/initialize', headers=headers, json=data)
+            if response.status_code != 200:
+                return Response({"error": "Failed to initialize payment"}, status=response.status_code)
+            return Response(response.json(), status=response.status_code)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
