@@ -16,6 +16,8 @@ urlpatterns = [
     # Wishlist & Bookings (user-authenticated)
     path('wishlist/', views.WishlistView.as_view(), name='wishlist'),
     path('bookings/', views.BookingsView.as_view(), name='bookings'),
+    path('bookings/<int:pk>/', views.BookingsDetailView.as_view(), name='booking-detail'),
+    path('property/<int:pk>/booking/', views.PropertyBookingView.as_view(), name='property-booking'),
 
     # Admin Dashboard Pages
     path('admin/dashboard/', views.AdminDashboard.as_view(), name='admin-dashboard'),

@@ -38,7 +38,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-
 class Properties(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
@@ -52,6 +51,9 @@ class Properties(models.Model):
     bathrooms = models.IntegerField()
     area = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to='properties/', null=True, blank=True)
+    is_wishlist = models.BooleanField(default=False)
+    gallery_images = models.JSONField(default=list, blank=True)
+    
 
     def __str__(self):
         return self.title
@@ -69,7 +71,7 @@ class Wishlist(models.Model):
 
 class Bookings(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    property = models.ForeignKey(Properties, on_delete=models.CASCADE)
+    property = models.ForeignKey(Properties, on_delete=models.CASCADE,related_name='property')
     booking_date = models.DateTimeField(auto_now_add=True)
     check_in_date = models.DateField()
     check_out_date = models.DateField()
@@ -77,3 +79,5 @@ class Bookings(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.property.title} - {self.check_in_date} to {self.check_out_date}"
+    
+

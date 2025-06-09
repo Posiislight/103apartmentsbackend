@@ -7,7 +7,7 @@ from .models import Properties, Wishlist, User, Bookings
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from . import serializers
-
+from datetime import datetime
 # AUTHENTICATION VIEWS
 
 class LoginView(APIView):
@@ -34,12 +34,12 @@ class RegisterView(APIView):
 
         if password != confirm_password:
             return Response({"message": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            try:
+                user = User.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
+                return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -93,7 +93,7 @@ class PropertyListView(APIView):
             return Response({"message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class PropertyDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, pk):
         try:
@@ -118,14 +118,33 @@ class WishlistView(APIView):
         user = request.user
         property_id = request.data.get('property')
         try:
-            Wishlist.objects.create(user=user, property_id=property_id)
-            return Response({"message": "Added to wishlist"}, status=status.HTTP_201_CREATED)
+            property = Properties.objects.get(pk=property_id)
+            serializer = serializers.WishlistSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(user=user, property=property) 
+                return Response({"message": "Added to wishlist"}, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request):
+        user = request.user
+        property_id = request.data.get('property')
+        if not property_id:
+            return Response({"error": "Property ID required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            property = Properties.objects.get(pk=property_id)
+            wishlist = Wishlist.objects.get(user_id=user, property_id=property_id)
+            wishlist.delete()
+            return Response({"message": "Wishlist item deleted"}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"message": "Wishlist item not found"}, status=status.HTTP_404_NOT_FOUND)
+
 # BOOKINGS
 
-class BookingsView(APIView):
+class BookingsView(APIView):    
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -137,13 +156,27 @@ class BookingsView(APIView):
     def post(self, request):
         user = request.user
         serializer = serializers.BookingsSerializer(data=request.data)
+        price = float(request.data.get('total_price'))
+        check_out_date = request.data.get('check_out_date')
+        check_in_date = request.data.get('check_in_date')
+        property_id = request.data.get('property')
+        property = Properties.objects.get(pk=property_id)  
+        if not check_in_date or not check_out_date:
+            return Response({"error": "Check-in and check-out dates are required"}, status=400)
+        check_in = datetime.strptime(check_in_date, "%Y-%m-%d").date()
+        check_out = datetime.strptime(check_out_date, "%Y-%m-%d").date()
+        days = (check_out - check_in).days
+        total_price = price*days
+
+        
         if serializer.is_valid():
-            serializer.save(user=user)
+            serializer.save(user=user,total_price=total_price)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ADMIN VIEWS
-
 class AdminDashboard(APIView):
     permission_classes = [IsAdminUser]
 
@@ -214,4 +247,21 @@ class HomePage(APIView):
     def get(self, request):
         properties = Properties.objects.all()
         serializer = serializers.PropertySerializer(properties, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class BookingsDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        user = request.user
+        booking = Bookings.objects.get(user=user,pk=pk)
+        serializer = serializers.BookingsSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class PropertyBookingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request,pk):
+        booking = Bookings.objects.filter(property_id=pk)
+        serializer = serializers.BookingsSerializer(booking,many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
