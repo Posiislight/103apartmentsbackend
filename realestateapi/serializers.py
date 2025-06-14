@@ -18,8 +18,22 @@ class WishlistSerializer(serializers.ModelSerializer):
 class BookingsSerializer(serializers.ModelSerializer):
     property_details = PropertySerializer(source='property', read_only=True)
     
+    
     class Meta:
         model = models.Bookings
         fields = '__all__'
 
         read_only_fields = ['id','user', 'created_at', 'updated_at']
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.User
+        fields = '__all__'
+        
+class RecentBookingSerializer(serializers.ModelSerializer):
+    property = PropertySerializer()
+    user = UserSerializer()
+    class Meta:
+        model = Bookings
+        fields = ['id', 'property', 'user', 'booking_date', 'status']
+        

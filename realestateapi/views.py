@@ -3,10 +3,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.middleware.csrf import get_token
+
+from realestatebackend import settings
 from .models import Properties, Wishlist, User, Bookings
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.parsers import MultiPartParser, FormParser
+
 from . import serializers
+
 from datetime import datetime
 import requests 
 # AUTHENTICATION VIEWS
@@ -179,7 +184,7 @@ class BookingsView(APIView):
 
 # ADMIN VIEWS
 class AdminDashboard(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         properties = Properties.objects.all()
@@ -191,19 +196,27 @@ class AdminDashboard(APIView):
             'properties': serializers.PropertySerializer(properties, many=True).data,
             'users': serializers.UserSerializer(users, many=True).data,
             'featured_properties': serializers.PropertySerializer(featured_properties, many=True).data,
-            'bookings': serializers.BookingsSerializer(bookings, many=True).data
+            'bookings': serializers.BookingsSerializer(bookings, many=True).data,
+            'counts' : {
+                'properties':properties.count(),
+                'users': users.count(),
+                'bookings':bookings.count(),
+                'featured_properties':featured_properties.count(),
+            }
+            
+            
         }
         return Response(serialized_data, status=status.HTTP_200_OK)
 
 class AdminPropertyPage(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         properties = Properties.objects.all()
         serializer = serializers.PropertySerializer(properties, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def put(self, request):
+    def put(self, request, pk):
         property_id = request.data.get('id')
         try:
             property = Properties.objects.get(pk=property_id)
@@ -214,7 +227,7 @@ class AdminPropertyPage(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Properties.DoesNotExist:
             return Response({"message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
-
+            
     def delete(self, request):
         property_id = request.data.get('id')
         try:
@@ -301,3 +314,96 @@ class PayStackView(APIView):
             return Response(response.json(), status=response.status_code)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self,request):
+        try:
+            reference = request.query_params.get('reference')
+            headers = {
+                'Authorization':f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+                'Content-type':'application/json'
+            }
+            url = f'https://api.paystack.co/transaction/verify/{reference}'
+            response = requests.get(url,headers=headers)
+            return Response(response.json(),status=response.status_code)
+        except Exception as e:
+            return Response({"error":str(e)},status=response.status_code)
+
+
+class UserDetailsView(APIView):
+    def get(self,request):
+        user = request.user
+        try:
+            serializer = serializers.UserSerializer(user)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class CalculateBookingTotalPriceView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        property_id = request.query_params.get('property_id')
+        check_in_date = request.query_params.get('check_in_date')
+        check_out_date = request.query_params.get('check_out_date')
+
+        if not property_id or not check_in_date or not check_out_date:
+            return Response({"error": "property_id, check_in_date, and check_out_date are required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            property_obj = Properties.objects.get(pk=property_id)
+            check_in = datetime.strptime(check_in_date, "%Y-%m-%d").date()
+            check_out = datetime.strptime(check_out_date, "%Y-%m-%d").date()
+            days = (check_out - check_in).days
+            if days <= 0:
+                return Response({"error": "Check-out date must be after check-in date."}, status=status.HTTP_400_BAD_REQUEST)
+            total_price = property_obj.price * days
+            return Response({"total_price": total_price, "days": days, "price_per_day": property_obj.price}, status=status.HTTP_200_OK)
+        except Properties.DoesNotExist:
+            return Response({"error": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class RecentBookingsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        bookings = Bookings.objects.select_related('property', 'user').order_by('-booking_date')  # latest 10
+        serializer = serializers.RecentBookingSerializer(bookings, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminPropertyDetailView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_object(self, pk):
+        try:
+            return Properties.objects.get(pk=pk)
+        except Properties.DoesNotExist:
+            return None
+
+    def put(self, request, pk):
+        property = self.get_object(pk)
+        if not property:
+            return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
+        main_image = request.FILES.get("image")
+        gallery_images = request.FILES.getlist("gallery_images")
+
+        data = request.data.copy()
+        if main_image:
+            data["image"] = main_image
+        if gallery_images:
+            data.setlist("gallery_images", gallery_images)
+        serializer = serializers.PropertySerializer(property, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"property deleted successfuly"},status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk):
+        property = self.get_object(pk)
+        if not property:
+            return Response({"message":"property doesnt exist"},status=status.HTTP_404_NOT_FOUND)
+        property.delete()
+        return Response({"message":"property successfuly deleted"},status=status.HTTP_204_NO_CONTENT)
