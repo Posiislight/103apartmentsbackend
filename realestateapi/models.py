@@ -30,6 +30,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+    
+
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name','password']
@@ -52,7 +54,7 @@ class Properties(models.Model):
     area = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to='properties/', null=True, blank=True)
     is_wishlist = models.BooleanField(default=False)
-    gallery_images = models.JSONField(default=list, blank=True)
+    gallery_images = models.ImageField(upload_to='gallery_images', blank=True,null=True)
     
 
     def __str__(self):
@@ -76,7 +78,7 @@ class Bookings(models.Model):
         ('Completed','Completed'),
         ('Cancelled','Cancelled'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='booking')
     property = models.ForeignKey(Properties, on_delete=models.CASCADE,related_name='property')
     booking_date = models.DateTimeField(auto_now_add=True)
     check_in_date = models.DateField()

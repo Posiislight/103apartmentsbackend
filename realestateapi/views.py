@@ -215,43 +215,18 @@ class AdminPropertyPage(APIView):
         properties = Properties.objects.all()
         serializer = serializers.PropertySerializer(properties, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+        
+    def post(self,request):
+        serializer = serializers.PropertySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
-    def put(self, request, pk):
-        property_id = request.data.get('id')
-        try:
-            property = Properties.objects.get(pk=property_id)
-            serializer = serializers.PropertySerializer(property, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Properties.DoesNotExist:
-            return Response({"message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-    def delete(self, request):
-        property_id = request.data.get('id')
-        try:
-            property = Properties.objects.get(pk=property_id)
-            property.delete()
-            return Response({"message": "Property deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-        except Properties.DoesNotExist:
-            return Response({"message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
 
-class AdminUserPage(APIView):
-    permission_classes = [IsAdminUser]
 
-    def get(self, request):
-        users = User.objects.all()
-        serializer = serializers.UserSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-class AdminBookingsPage(APIView):
-    permission_classes = [IsAdminUser]
-
-    def get(self, request):
-        bookings = Bookings.objects.all()
-        serializer = serializers.BookingsSerializer(bookings, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # HOME PAGE
 
@@ -400,6 +375,8 @@ class AdminPropertyDetailView(APIView):
             serializer.save()
             return Response({"message":"property deleted successfuly"},status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
 
     def delete(self,request,pk):
         property = self.get_object(pk)
@@ -407,3 +384,45 @@ class AdminPropertyDetailView(APIView):
             return Response({"message":"property doesnt exist"},status=status.HTTP_404_NOT_FOUND)
         property.delete()
         return Response({"message":"property successfuly deleted"},status=status.HTTP_204_NO_CONTENT)
+    
+class AdminBookingsPage(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        bookings = Bookings.objects.all()
+        serializer = serializers.BookingsSerializer(bookings, many=True)
+
+        # Prepare cleaned/flattened data for frontend
+        serializer_data = [
+            {
+                "id": booking["id"],
+                "propertyTitle": booking["property_details"]["title"],
+                "propertyImage": booking["property_details"]["image"],
+                "client": f"{booking['user_details']['first_name']} {booking['user_details']['last_name']}",
+                "email": booking["user_details"]["email"],
+                "check_in": booking["check_in_date"],
+                "check_out": booking["check_out_date"],
+                "booking_date":booking["booking_date"],
+                
+            }
+            for booking in serializer.data
+        ]
+
+        return Response(serializer_data, status=status.HTTP_200_OK)
+
+class AdminUserPage(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        users = User.objects.all()
+
+        serializer_data = [
+            {
+                "name": f"{user.first_name} {user.last_name}",
+                "email": user.email,
+                "total_bookings": user.booking.count()  # If no related_name is set
+            }
+            for user in users
+        ]
+
+        return Response(serializer_data)

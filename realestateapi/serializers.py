@@ -15,20 +15,28 @@ class WishlistSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['id','user', 'created_at', 'updated_at']
 
+class BookingMiniSerializer(serializers.ModelSerializer):
+    property_details = PropertySerializer(many=True, read_only=True, source='bookings_set')
+
+    class Meta:
+        model = Bookings
+        fields = ['id', 'property_details', 'booking_date', 'status']
+
+class UserSerializer(serializers.ModelSerializer):
+    bookings = BookingMiniSerializer(read_only=True)
+    class Meta:
+        model = models.User
+        fields = '__all__'
+
 class BookingsSerializer(serializers.ModelSerializer):
     property_details = PropertySerializer(source='property', read_only=True)
-    
+    user_details = UserSerializer(source='user',read_only=True)
     
     class Meta:
         model = models.Bookings
         fields = '__all__'
 
         read_only_fields = ['id','user', 'created_at', 'updated_at']
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.User
-        fields = '__all__'
         
 class RecentBookingSerializer(serializers.ModelSerializer):
     property = PropertySerializer()
