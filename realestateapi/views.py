@@ -3,9 +3,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.middleware.csrf import get_token
-
+from django.http import JsonResponse
 from realestatebackend import settings
-from .models import Properties, Wishlist, User, Bookings
+from .models import Properties, Wishlist, User, Bookings,PropertyImages
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -20,9 +20,9 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
+        username = request.data.get('username')
         password = request.data.get('password')
-        user = authenticate(request, email=email, password=password)
+        user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
             return Response({"message": "Login successful"}, status=status.HTTP_200_OK)
@@ -32,7 +32,7 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
+        username = request.data.get('username')
         password = request.data.get('password')
         confirm_password = request.data.get('confirm_password')
         first_name = request.data.get('first_name')
@@ -42,7 +42,7 @@ class RegisterView(APIView):
             return Response({"message": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             try:
-                user = User.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
+                user = User.objects.create_user(username=username, password=password, first_name=first_name, last_name=last_name)
                 return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
             except Exception as e:
                 return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -219,15 +219,14 @@ class AdminPropertyPage(APIView):
     def post(self,request):
         serializer = serializers.PropertySerializer(data=request.data)
         if serializer.is_valid():
+            property_instance=serializer.save()
             serializer.save()
+
+            for image in request.FILES.getlist('gallery_images'):
+                PropertyImages.objects.create(property=property_instance, image=image)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
-    
-
-
-
-
 # HOME PAGE
 
 class HomePage(APIView):
@@ -264,12 +263,12 @@ class FeaturedPropertyView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class PayStackView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self,request):
         user = request.user
         amount = request.data.get('total_price')
-        email = request.data.get('email')
+        email = request.data.get('username')
         if not amount or not email:
             return Response({"error": "Amount and email are required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -288,6 +287,8 @@ class PayStackView(APIView):
                 return Response({"error": "Failed to initialize payment"}, status=response.status_code)
             return Response(response.json(), status=response.status_code)
         except Exception as e:
+            print(request.data)
+            print(serializer.errors)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
     def get(self,request):
@@ -365,14 +366,15 @@ class AdminPropertyDetailView(APIView):
         main_image = request.FILES.get("image")
         gallery_images = request.FILES.getlist("gallery_images")
 
-        data = request.data.copy()
-        if main_image:
-            data["image"] = main_image
-        if gallery_images:
-            data.setlist("gallery_images", gallery_images)
+        
         serializer = serializers.PropertySerializer(property, data=request.data)
         if serializer.is_valid():
+            property_instance=serializer.save()
             serializer.save()
+
+            for image in request.FILES.getlist('gallery_images'):
+                PropertyImages.objects.create(property=property_instance, image=image)
+
             return Response({"message":"property deleted successfuly"},status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -399,7 +401,7 @@ class AdminBookingsPage(APIView):
                 "propertyTitle": booking["property_details"]["title"],
                 "propertyImage": booking["property_details"]["image"],
                 "client": f"{booking['user_details']['first_name']} {booking['user_details']['last_name']}",
-                "email": booking["user_details"]["email"],
+                "email": booking["user_details"]["username"],
                 "check_in": booking["check_in_date"],
                 "check_out": booking["check_out_date"],
                 "booking_date":booking["booking_date"],
@@ -419,10 +421,61 @@ class AdminUserPage(APIView):
         serializer_data = [
             {
                 "name": f"{user.first_name} {user.last_name}",
-                "email": user.email,
+                "email": user.username,
                 "total_bookings": user.booking.count()  # If no related_name is set
             }
             for user in users
         ]
 
         return Response(serializer_data)
+    
+class AdminLoginView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        serializer = serializers.AdminLoginSerializer(data=request.data, context={'request': request})
+
+        
+        if serializer.is_valid():
+            user = serializer.validated_data['user']  # Get user from validated_data
+            return JsonResponse(
+                {
+                    "user":{
+                        "id": user.id,
+                        "email": user.username,
+                        "is_admin": user.is_admin,
+                    }
+                }
+            )
+        else:
+            print(request.data)
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminRegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = serializers.UserSerializer(data=request.data)
+
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            password = validated_data.get('password')
+            confirm_password = request.data.get('confirm_password')  # Still coming from raw data
+
+            if password != confirm_password:
+                return Response({"message": "The passwords don't match"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.create_superuser(
+                username=validated_data.get('username'),
+                    password=password,
+                    
+                    first_name=validated_data.get('first_name'),
+                    last_name=validated_data.get('last_name')
+                )
+                return Response({"message": "Admin created successfully"}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

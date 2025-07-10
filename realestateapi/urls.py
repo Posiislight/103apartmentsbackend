@@ -26,7 +26,8 @@ urlpatterns = [
     path('admin/bookings/', views.AdminBookingsPage.as_view(), name='admin-bookings'),
     path('admin/recent-bookings/', views.RecentBookingsView.as_view(), name='recent-bookings'),
     path('admin/properties/<int:pk>/', views.AdminPropertyDetailView.as_view(), name='admin-property-detail'),
-    
+    path('admin/login/', views.AdminLoginView.as_view(), name='admin-login'),
+    path('admin/register/',views.AdminRegisterView.as_view(),name='admin-register'),
     #PaymentEndpoint
     path('payment/',views.PayStackView.as_view(),name='admin-dashboard'),
 
