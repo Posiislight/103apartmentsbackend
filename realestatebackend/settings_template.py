@@ -17,13 +17,13 @@ DEBUG = False
 ALLOWED_HOSTS = ['your-domain.com', 'www.your-domain.com']
 
 CORS_ALLOWED_ORIGINS = [
-    "https://your-domain.com",
-    "https://www.your-domain.com",
+    "https://dondaxlimited.com",
+    "https://opulent-haven-homes.vercel.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://your-domain.com",
-    "https://www.your-domain.com",
+    "https://yourdomain.com",
+    "https://opulent-haven-homes.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
