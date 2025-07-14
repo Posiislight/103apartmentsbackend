@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: realestate-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn realestatebackend.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: realestate-db
+          property: connectionString
+      - key: DB_NAME
+        fromDatabase:
+          name: realestate-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: realestate-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: realestate-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: realestate-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: realestate-db
+          property: port
+
+databases:
+  - name: realestate-db
+    databaseName: realestate
+    user: realestate_user 

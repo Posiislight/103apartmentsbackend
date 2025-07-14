@@ -11,7 +11,7 @@ class PropertyImagesSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 class PropertySerializer(serializers.ModelSerializer):
-    gallery_images = PropertyImagesSerializer(many=True, read_only=True, source='property_images')
+    gallery_images = PropertyImagesSerializer(many=True, read_only=True, source='gallery_images')
     
     class Meta:
         model = models.Properties

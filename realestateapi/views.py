@@ -288,7 +288,6 @@ class PayStackView(APIView):
             return Response(response.json(), status=response.status_code)
         except Exception as e:
             print(request.data)
-            print(serializer.errors)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
     def get(self,request):

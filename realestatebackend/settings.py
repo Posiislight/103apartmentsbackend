@@ -16,25 +16,30 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w54df=^zkf@cetvr=s$0(8ekq=*9)ammj)1h1b__&^@+s5czg!'
-PAYSTACK_SECRET_KEY='sk_test_3eb305b07b37a2738671ff84a9cac6218d0d92fa'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-this-with-a-strong-secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'https://opulent-haven-homes.vercel.app,www.dondaxlimited.com').split(',')
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    'http://localhost:8080',
+    "https://dondaxlimited.com",
+    "https://opulent-haven-homes.vercel.app",
 ]
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8080",
+    "https://yourdomain.com",
+    "https://opulent-haven-homes.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
 # Application definition
 
@@ -102,11 +107,11 @@ WSGI_APPLICATION = 'realestatebackend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': '103apartments',
-        'USER':'root',
-        'PASSWORD':'password',
-        'HOST':'localhost',
-        'PORT':'3306',
+        'NAME': os.environ.get('DB_NAME', 'railway'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'ONVRgjUZrlvIsVWEApahKoOgLBlqFuKP'),
+        'HOST': os.environ.get('DB_HOST', 'gondola.proxy.rlwy.net'),
+        'PORT': os.environ.get('DB_PORT', '24415'),
     }
 }
 
@@ -145,25 +150,30 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
-        'rest_framework.permissions.IsAuthenticated'
-    ),
-   
-}
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Logging (optional but recommended)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'django.log'),
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # default
