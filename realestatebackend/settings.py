@@ -12,9 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os 
+from dotenv import load_dotenv
 import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env from project root if present
+load_dotenv(BASE_DIR / '.env')
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -105,10 +109,10 @@ WSGI_APPLICATION = 'realestatebackend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASE_URL = os.environ.get(
-    'DATABASE_URL',
-    'postgresql://project_manager_db_6mga_user:SAERTdj5kuWXJtETlfr2DZM4FBYHq7di@dpg-d2b785re5dus73ca7m40-a.oregon-postgres.render.com/project_manager_db_6mga'
-)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if not DATABASE_URL:
+    raise RuntimeError('DATABASE_URL is not set. Define it in your environment or .env file.')
 
 DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
