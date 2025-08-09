@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os 
+import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,14 +23,14 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-this-with-a-strong-sec
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'https://opulent-haven-homes.vercel.app,www.dondaxlimited.com').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'https://one03apartmentsbackend.onrender.com').split(',')
 
 CORS_ALLOWED_ORIGINS = [
-    "https://dondaxlimited.com",
+    
     "https://opulent-haven-homes.vercel.app",
 ]
 CSRF_TRUSTED_ORIGINS = [
-    "https://yourdomain.com",
+    
     "https://opulent-haven-homes.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
@@ -104,15 +105,13 @@ WSGI_APPLICATION = 'realestatebackend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DATABASE_URL = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://project_manager_db_6mga_user:SAERTdj5kuWXJtETlfr2DZM4FBYHq7di@dpg-d2b785re5dus73ca7m40-a.oregon-postgres.render.com/project_manager_db_6mga'
+)
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'railway'),
-        'USER': os.environ.get('DB_USER', 'root'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'ONVRgjUZrlvIsVWEApahKoOgLBlqFuKP'),
-        'HOST': os.environ.get('DB_HOST', 'gondola.proxy.rlwy.net'),
-        'PORT': os.environ.get('DB_PORT', '24415'),
-    }
+    'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 }
 
 AUTH_USER_MODEL = 'realestateapi.User' 
