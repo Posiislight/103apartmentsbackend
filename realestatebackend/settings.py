@@ -34,12 +34,16 @@ ALLOWED_HOSTS = os.environ.get(
     'one03apartmentsbackend.onrender.com,opulent-haven-homes.vercel.app'
 ).split(',')
 
-CORS_ALLOWED_ORIGINS = [
-    "https://opulent-haven-homes.vercel.app",
-]
-CSRF_TRUSTED_ORIGINS = [
-    "https://opulent-haven-homes.vercel.app",
-]
+# Allow any origin for now
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Comment out specific origins when using CORS_ALLOW_ALL_ORIGINS
+# CORS_ALLOWED_ORIGINS = [
+#     "https://opulent-haven-homes.vercel.app",
+# ]
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://opulent-haven-homes.vercel.app",
+# ]
 CORS_ALLOW_CREDENTIALS = True
 
 SESSION_COOKIE_SECURE = True
