@@ -15,6 +15,7 @@ from . import serializers
 from datetime import datetime
 import requests 
 # AUTHENTICATION VIEWS
+from django.http import HttpResponse
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -181,6 +182,12 @@ class BookingsView(APIView):
         else:
             print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SentryTestView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        1/0  # Intentional error to test Sentry
+        return HttpResponse("This will never be reached")
 
 # ADMIN VIEWS
 class AdminDashboard(APIView):

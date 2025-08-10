@@ -35,6 +35,8 @@ urlpatterns = [
     #UserEndpoints 
     path('user-details/',views.UserDetailsView.as_view(),name='user-details'),
     path('calculate-booking-total/', views.CalculateBookingTotalPriceView.as_view(), name='calculate-booking-total'),
+    # Sentry test endpoint (temporary)
+    path('sentry-test/', views.SentryTestView.as_view(), name='sentry-test'),
 
 ]
 

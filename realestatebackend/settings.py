@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os 
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,14 +29,15 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-this-with-a-strong-sec
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'https://one03apartmentsbackend.onrender.com').split(',')
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS',
+    'one03apartmentsbackend.onrender.com,opulent-haven-homes.vercel.app'
+).split(',')
 
 CORS_ALLOWED_ORIGINS = [
-    
     "https://opulent-haven-homes.vercel.app",
 ]
 CSRF_TRUSTED_ORIGINS = [
-    
     "https://opulent-haven-homes.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
@@ -48,10 +51,10 @@ SECURE_HSTS_PRELOAD = True
 
 # Application definition
 
-SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -117,6 +120,17 @@ if not DATABASE_URL:
 DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 }
+
+# Sentry (enabled only when not in DEBUG)
+if not DEBUG:
+    sentry_sdk.init(
+        dsn=os.environ.get('SENTRY_DSN'),
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.0')),
+        profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.0')),
+        send_default_pii=True,
+        environment=os.environ.get('SENTRY_ENVIRONMENT', 'production'),
+    )
 
 AUTH_USER_MODEL = 'realestateapi.User' 
 # Password validation
