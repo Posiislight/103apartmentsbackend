@@ -116,12 +116,12 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
         'USER': 'postgres.iybriwlwyaykwligpwak',
-        'PASSWORD': os.environ.get('DATABASE_PASSWORD'),  # Your Supabase database password
+        'PASSWORD': 'Adeleke0!23',
         'HOST': 'aws-1-eu-north-1.pooler.supabase.com',
         'PORT': '5432',
     }
 }
-
+#os.environ.get('DATABASE_PASSWORD')  Your Supabase database password
 AUTH_USER_MODEL = 'realestateapi.User' 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
